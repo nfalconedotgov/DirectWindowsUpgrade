@@ -40,6 +40,7 @@ $LOG_FILE = "C:\Win11_Upgrade_Progress.log"      # Main log file
 $MONITOR_LOG = "C:\Win11_Monitor.log"            # Process monitor log file
 
 # BEHAVIOR SETTINGS
+$BYPASS_CONFIRMATION = $false                    # Set to $true to skip all confirmation prompts
 $ALLOW_AUTOMATIC_REBOOT = $true                  # Set to $false to prevent automatic reboots
 
 #######################################################################
@@ -80,10 +81,14 @@ Write-Host "- The process may appear to stall at times, but this is normal"
 Write-Host "- Do not interrupt the process once it has started"
 Write-Host ""
 
-$confirmation = Read-Host "Do you want to continue with the Windows 11 upgrade? (y/n)"
-if ($confirmation -ne 'y' -and $confirmation -ne 'Y') {
-    Write-Host "Windows 11 upgrade cancelled by user."
-    exit 0
+if (-not $BYPASS_CONFIRMATION) {
+    $confirmation = Read-Host "Do you want to continue with the Windows 11 upgrade? (y/n)"
+    if ($confirmation -ne 'y' -and $confirmation -ne 'Y') {
+        Write-Host "Windows 11 upgrade cancelled by user."
+        exit 0
+    }
+} else {
+    Write-Host "Confirmation bypassed. Proceeding with Windows 11 upgrade automatically..." -ForegroundColor Yellow
 }
 
 # Set aggressive compatibility bypass registry keys
@@ -178,10 +183,14 @@ if (Test-Path $isoUrl) {
     $extension = [System.IO.Path]::GetExtension($isoUrl).ToLower()
     if ($extension -ne ".iso") {
         Write-Host "Warning: The file does not have an .iso extension. It may not be a valid Windows installation image." -ForegroundColor Yellow
-        $continue = Read-Host "Do you want to continue anyway? (y/n)"
-        if ($continue -ne 'y' -and $continue -ne 'Y') {
-            Write-Host "Operation cancelled by user."
-            exit 0
+        if (-not $BYPASS_CONFIRMATION) {
+            $continue = Read-Host "Do you want to continue anyway? (y/n)"
+            if ($continue -ne 'y' -and $continue -ne 'Y') {
+                Write-Host "Operation cancelled by user."
+                exit 0
+            }
+        } else {
+            Write-Host "Confirmation bypassed. Continuing despite non-ISO extension..." -ForegroundColor Yellow
         }
     }
 
@@ -191,10 +200,14 @@ if (Test-Path $isoUrl) {
     if ($fileSizeMB -lt 3000) {
         Write-Host "Warning: The ISO file is only $fileSizeMB MB in size, which is unusually small for a Windows 11 ISO." -ForegroundColor Yellow
         Write-Host "A typical Windows 11 ISO is 4-6 GB in size." -ForegroundColor Yellow
-        $continue = Read-Host "Do you want to continue anyway? (y/n)"
-        if ($continue -ne 'y' -and $continue -ne 'Y') {
-            Write-Host "Operation cancelled by user."
-            exit 0
+        if (-not $BYPASS_CONFIRMATION) {
+            $continue = Read-Host "Do you want to continue anyway? (y/n)"
+            if ($continue -ne 'y' -and $continue -ne 'Y') {
+                Write-Host "Operation cancelled by user."
+                exit 0
+            }
+        } else {
+            Write-Host "Confirmation bypassed. Continuing despite small ISO size..." -ForegroundColor Yellow
         }
     }
 
@@ -230,91 +243,20 @@ if (Test-Path $isoUrl) {
 if (-not $isLocalFile) {
     Write-Host "Downloading Windows 11 ISO..." -ForegroundColor Cyan
     Write-Host "This may take some time depending on your internet connection speed." -ForegroundColor Cyan
-    Write-Host "Download progress will be displayed..." -ForegroundColor Cyan
 
     try {
-        # Create a progress-tracking download function
         $webClient = New-Object System.Net.WebClient
         $webClient.Headers.Add("User-Agent", "Mozilla/5.0 Windows PowerShell Script")
-
-        # Register events for download progress tracking
-        $eventData = @{}
-
-        # Define the handler for DownloadProgressChanged
-        $ProgressChanged = {
-            $percent = $eventArgs.ProgressPercentage
-            $totalBytes = $eventArgs.TotalBytesToReceive
-            $receivedBytes = $eventArgs.BytesReceived
-
-            # Calculate download speed
-            $currentTime = Get-Date
-            if (-not $eventData.LastTime) {
-                $eventData.LastTime = $currentTime
-                $eventData.LastBytes = 0
-            }
-
-            $timeDiff = ($currentTime - $eventData.LastTime).TotalSeconds
-            if ($timeDiff -ge 1) {
-                $byteDiff = $receivedBytes - $eventData.LastBytes
-                $speedMBps = [math]::Round(($byteDiff / $timeDiff) / 1MB, 2)
-
-                # Calculate estimated time remaining
-                $remainingBytes = $totalBytes - $receivedBytes
-                $estimatedSeconds = 0
-                if ($byteDiff -gt 0) {
-                    $estimatedSeconds = [math]::Round($remainingBytes / ($byteDiff / $timeDiff))
-                }
-
-                # Format as hours:minutes:seconds
-                $estimatedTime = [TimeSpan]::FromSeconds($estimatedSeconds)
-                $estimatedTimeStr = "{0:hh\:mm\:ss}" -f $estimatedTime
-
-                # Convert total size to MB or GB for display
-                if ($totalBytes -ge 1GB) {
-                    $totalSize = [math]::Round($totalBytes / 1GB, 2)
-                    $downloadedSize = [math]::Round($receivedBytes / 1GB, 2)
-                    $sizeUnit = "GB"
-                } else {
-                    $totalSize = [math]::Round($totalBytes / 1MB, 2)
-                    $downloadedSize = [math]::Round($receivedBytes / 1MB, 2)
-                    $sizeUnit = "MB"
-                }
-
-                Write-Progress -Activity "Downloading Windows 11 ISO" `
-                    -Status "$percent% Complete - $downloadedSize $sizeUnit of $totalSize $sizeUnit - $speedMBps MB/s" `
-                    -PercentComplete $percent `
-                    -CurrentOperation "Estimated time remaining: $estimatedTimeStr"
-
-                # Update for next calculation
-                $eventData.LastTime = $currentTime
-                $eventData.LastBytes = $receivedBytes
-            }
-        }
-
-        # Define the handler for DownloadFileCompleted
-        $Completed = {
-            Write-Progress -Activity "Downloading Windows 11 ISO" -Completed
-            $eventData.Clear()
-            if ($eventArgs.Error -ne $null) {
-                throw $eventArgs.Error
-            }
-        }
-
-        # Register the event handlers
-        $downloadProgressEvent = Register-ObjectEvent -InputObject $webClient -EventName DownloadProgressChanged -Action $ProgressChanged
-        $downloadCompletedEvent = Register-ObjectEvent -InputObject $webClient -EventName DownloadFileCompleted -Action $Completed
-
-        # Start the download
-        $webClient.DownloadFileAsync((New-Object System.Uri($isoUrl)), $isoPath)
-
-        # Wait for download to complete
-        while ($webClient.IsBusy) {
-            Start-Sleep -Milliseconds 100
-        }
-
-        # Clean up event handlers
-        Unregister-Event -SourceIdentifier $downloadProgressEvent.Id
-        Unregister-Event -SourceIdentifier $downloadCompletedEvent.Id
+        
+        # Disable progress bar to improve download performance
+        $ProgressPreference = 'SilentlyContinue'
+        
+        Write-Host "Download started at $(Get-Date)" -ForegroundColor Cyan
+        $webClient.DownloadFile($isoUrl, $isoPath)
+        Write-Host "Download completed at $(Get-Date)" -ForegroundColor Green
+        
+        # Restore progress preference
+        $ProgressPreference = 'Continue'
 
         # Verify the download
         if (Test-Path $isoPath) {
@@ -325,10 +267,14 @@ if (-not $isLocalFile) {
             if ($fileSizeMB -lt 3000) {
                 Write-Host "Warning: The downloaded ISO is only $fileSizeMB MB, which is unusually small for a Windows 11 ISO." -ForegroundColor Yellow
                 Write-Host "This might indicate a partial download or incorrect ISO source." -ForegroundColor Yellow
-                $continue = Read-Host "Do you want to continue anyway? (y/n)"
-                if ($continue -ne 'y' -and $continue -ne 'Y') {
-                    Write-Host "Operation cancelled by user."
-                    exit 0
+                if (-not $BYPASS_CONFIRMATION) {
+                    $continue = Read-Host "Do you want to continue anyway? (y/n)"
+                    if ($continue -ne 'y' -and $continue -ne 'Y') {
+                        Write-Host "Operation cancelled by user."
+                        exit 0
+                    }
+                } else {
+                    Write-Host "Confirmation bypassed. Continuing despite small downloaded ISO size..." -ForegroundColor Yellow
                 }
             } else {
                 Write-Host "ISO downloaded successfully ($fileSizeMB MB)." -ForegroundColor Green
