@@ -375,19 +375,15 @@ try {
     $process.StartInfo = $processInfo
     $process.Start() | Out-Null
 
-    # Display a simple spinner to show progress
-    $spinner = @('|', '/', '-', '\')
-    $spinnerPos = 0
+    # Record start time
     $startTime = Get-Date
-
-    Write-Host "  " -NoNewline
-
-    while (-not $process.HasExited) {
-        Write-Host "`r  $($spinner[$spinnerPos]) Extracting... [$(([TimeSpan]::FromSeconds((Get-Date).Subtract($startTime).TotalSeconds)).ToString("hh\:mm\:ss"))]" -NoNewline
-        $spinnerPos = ($spinnerPos + 1) % 4
-        Start-Sleep -Milliseconds 200
-    }
-    Write-Host "`r  Extraction complete [$(([TimeSpan]::FromSeconds((Get-Date).Subtract($startTime).TotalSeconds)).ToString("hh\:mm\:ss"))]     " -ForegroundColor Green
+    
+    # Wait for process to complete (no spinner)
+    $process.WaitForExit()
+    
+    # Show completion message with total time
+    $extractionTime = [TimeSpan]::FromSeconds((Get-Date).Subtract($startTime).TotalSeconds)
+    Write-Host "Extraction complete [" $extractionTime.ToString("hh\:mm\:ss") "]" -ForegroundColor Green
 
     # Get the output without displaying it
     $standardOutput = $process.StandardOutput.ReadToEnd()
