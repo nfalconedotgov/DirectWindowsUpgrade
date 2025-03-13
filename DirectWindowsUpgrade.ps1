@@ -141,13 +141,13 @@ function Test-UrlIsValid {
         $request.Method = "HEAD"
         $request.Timeout = 15000  # 15 seconds timeout
         $request.UserAgent = "Mozilla/5.0 Windows PowerShell Script"
-        
+
         # Get the response
         $response = $request.GetResponse()
-        
+
         # Check if we can access the URL
         $success = $response.StatusCode -eq [System.Net.HttpStatusCode]::OK
-        
+
         # Show file size if available
         $contentLength = $response.Headers["Content-Length"]
         if ($contentLength) {
@@ -158,7 +158,7 @@ function Test-UrlIsValid {
                 Write-Host "File size: $sizeInMB MB" -ForegroundColor Cyan
             }
         }
-        
+
         # Close the response
         $response.Close()
         return $success
@@ -424,35 +424,35 @@ try {
     $processInfo.RedirectStandardOutput = $true
     $processInfo.UseShellExecute = $false
     $processInfo.CreateNoWindow = $true
-    
+
     $process = New-Object System.Diagnostics.Process
     $process.StartInfo = $processInfo
     $process.Start() | Out-Null
-    
+
     # Display a simple spinner to show progress
     $spinner = @('|', '/', '-', '\')
     $spinnerPos = 0
     $startTime = Get-Date
-    
+
     Write-Host "  " -NoNewline
-    
+
     while (-not $process.HasExited) {
         Write-Host "`r  $($spinner[$spinnerPos]) Extracting... [$(([TimeSpan]::FromSeconds((Get-Date).Subtract($startTime).TotalSeconds)).ToString("hh\:mm\:ss"))]" -NoNewline
         $spinnerPos = ($spinnerPos + 1) % 4
         Start-Sleep -Milliseconds 200
     }
-    Write-Host "`r  ✓ Extraction complete [$(([TimeSpan]::FromSeconds((Get-Date).Subtract($startTime).TotalSeconds)).ToString("hh\:mm\:ss"))]     " -ForegroundColor Green
-    
+    Write-Host "`r  Extraction complete [$(([TimeSpan]::FromSeconds((Get-Date).Subtract($startTime).TotalSeconds)).ToString("hh\:mm\:ss"))]     " -ForegroundColor Green
+
     # Get the output without displaying it
     $standardOutput = $process.StandardOutput.ReadToEnd()
     $standardError = $process.StandardError.ReadToEnd()
-    
+
     # Check the exit code
     if ($process.ExitCode -ne 0) {
         # Format a user-friendly error message without dumping everything
         Write-Host "ERROR: 7-Zip extraction failed with exit code $($process.ExitCode)" -ForegroundColor Red
         Write-Host "The ISO file may be corrupted or incompatible." -ForegroundColor Yellow
-        
+
         # Show minimal error information
         if (-not [string]::IsNullOrEmpty($standardError)) {
             $errorLines = $standardError -split "`n"
@@ -461,7 +461,7 @@ try {
                 Write-Host "Error details: $relevantError" -ForegroundColor Yellow
             }
         }
-        
+
         exit 1
     }
 
@@ -914,17 +914,17 @@ goto check
     if ($errorMessage.Length -gt 150) {
         $errorMessage = $errorMessage.Substring(0, 150) + "..."
     }
-    
+
     # Create a clean, user-friendly error message
     $detailedMessage = "The Windows 11 upgrade process encountered an issue and could not continue.`nTry again or check the log file at $logFile for more details."
-    
+
     # Try to clean up
     try {
         Remove-Item -Path $isoPath -Force -ErrorAction SilentlyContinue
     } catch {
         # Ignore cleanup errors
     }
-    
+
     # Show clean error message
     Write-Host "ERROR: Windows 11 upgrade process failed." -ForegroundColor Red
     Write-Host "The Windows 11 upgrade process encountered an issue and could not continue." -ForegroundColor Yellow
