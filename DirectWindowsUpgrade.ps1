@@ -91,48 +91,6 @@ if (-not $BYPASS_CONFIRMATION) {
     Write-Host "Confirmation bypassed. Proceeding with Windows 11 upgrade automatically..." -ForegroundColor Yellow
 }
 
-# Set aggressive compatibility bypass registry keys
-Write-Host "Setting comprehensive compatibility bypass registry keys..."
-
-# TPM and basic hardware checks
-reg add "HKLM\SYSTEM\Setup\MoSetup" /f /v AllowUpgradesWithUnsupportedTPMorCPU /d 1 /t reg_dword
-reg add "HKLM\SYSTEM\Setup\LabConfig" /f /v BypassTPMCheck /d 1 /t reg_dword
-reg add "HKLM\SYSTEM\Setup\LabConfig" /f /v BypassSecureBootCheck /d 1 /t reg_dword
-reg add "HKLM\SYSTEM\Setup\LabConfig" /f /v BypassRAMCheck /d 1 /t reg_dword
-reg add "HKLM\SYSTEM\Setup\LabConfig" /f /v BypassStorageCheck /d 1 /t reg_dword
-reg add "HKLM\SYSTEM\Setup\LabConfig" /f /v BypassCPUCheck /d 1 /t reg_dword
-
-# Safeguard overrides
-reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate" /f /v DisableWUfBSafeguards /d 1 /t reg_dword
-reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\UpdatePolicy\Settings" /f /v DisableWUfBSafeguards /d 1 /t reg_dword
-reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate" /f /v DisableSafeguards /d 1 /t reg_dword
-
-# Setup compatibility settings
-reg add "HKLM\SYSTEM\Setup\UpgradeCompat" /f /v IgnoreAllWarnings /d 1 /t reg_dword
-reg add "HKLM\SYSTEM\Setup\UpgradeCompat" /f /v IgnoreHWRequirements /d 1 /t reg_dword
-reg add "HKLM\SYSTEM\Setup\UpgradeCompat" /f /v IgnoreApplicationsOnUpgrade /d 1 /t reg_dword
-reg add "HKLM\SYSTEM\Setup\UpgradeCompat" /f /v IgnoreAppsOnUpgrade /d 1 /t reg_dword
-reg add "HKLM\SYSTEM\Setup\Status\UninstallWindow" /f /v UninstallActive /d 0 /t reg_dword
-
-# Disable compatibility checks
-reg add "HKLM\SYSTEM\Setup" /f /v BypassCompatibilityCheck /d 1 /t reg_dword
-
-# Disable error reporting during upgrade
-reg add "HKLM\SOFTWARE\Microsoft\PCHealth\ErrorReporting" /f /v DoReport /d 0 /t reg_dword
-reg add "HKLM\SOFTWARE\Microsoft\Windows\Windows Error Reporting" /f /v Disabled /d 1 /t reg_dword
-
-# Skip setup compliance checks
-reg add "HKLM\SYSTEM\Setup" /f /v BypassComplianceCheck /d 1 /t reg_dword
-
-# Allow setup to continue despite errors
-reg add "HKLM\SYSTEM\Setup" /f /v AllowNonZeroExitStatus /d 1 /t reg_dword
-
-# Disable CEIP during setup
-reg add "HKLM\SOFTWARE\Policies\Microsoft\SQMClient\Windows" /f /v CEIPEnable /d 0 /t reg_dword
-
-# Force target platform version
-reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate" /f /v TargetReleaseVersion /d 1 /t reg_dword
-reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate" /f /v TargetReleaseVersionInfo /d "25H1" /t reg_sz
 
 # Function to validate URL - ensures the URL is reachable before download
 function Test-UrlIsValid {
@@ -488,32 +446,7 @@ PreinstallKitSpace=8000
       <UserData>
         <AcceptEula>true</AcceptEula>
       </UserData>
-      <RunSynchronous>
-        <RunSynchronousCommand wcm:action="add">
-          <Order>1</Order>
-          <Path>reg add HKLM\SYSTEM\Setup\LabConfig /v BypassTPMCheck /d 1 /t reg_dword /f</Path>
-        </RunSynchronousCommand>
-        <RunSynchronousCommand wcm:action="add">
-          <Order>2</Order>
-          <Path>reg add HKLM\SYSTEM\Setup\LabConfig /v BypassSecureBootCheck /d 1 /t reg_dword /f</Path>
-        </RunSynchronousCommand>
-        <RunSynchronousCommand wcm:action="add">
-          <Order>3</Order>
-          <Path>reg add HKLM\SYSTEM\Setup\LabConfig /v BypassRAMCheck /d 1 /t reg_dword /f</Path>
-        </RunSynchronousCommand>
-        <RunSynchronousCommand wcm:action="add">
-          <Order>4</Order>
-          <Path>reg add HKLM\SYSTEM\Setup\LabConfig /v BypassCPUCheck /d 1 /t reg_dword /f</Path>
-        </RunSynchronousCommand>
-        <RunSynchronousCommand wcm:action="add">
-          <Order>5</Order>
-          <Path>reg add HKLM\SYSTEM\Setup\LabConfig /v BypassStorageCheck /d 1 /t reg_dword /f</Path>
-        </RunSynchronousCommand>
-        <RunSynchronousCommand wcm:action="add">
-          <Order>6</Order>
-          <Path>reg add HKLM\SYSTEM\Setup\MoSetup /v AllowUpgradesWithUnsupportedTPMorCPU /d 1 /t reg_dword /f</Path>
-        </RunSynchronousCommand>
-      </RunSynchronous>
+
     </component>
   </settings>
 </unattend>
@@ -566,9 +499,7 @@ PreinstallKitSpace=8000
         "/telemetry", "disable",
         "/dynamicupdate", "enable",
         "/eula", "accept",
-        "/unattend:$answerFilePath",
-        "/product", "server",  # Add server product parameter to bypass hardware checks
-        "/pkey", "VK7JG-NPHTM-C97JM-9MPGT-3V66T"  # Generic Windows 11 Pro key
+        "/unattend:$answerFilePath"
     )
 
     # Add /noreboot switch if automatic reboots are disabled
@@ -720,31 +651,7 @@ if ($setupStatus.Success) {
             Write-ProgressLog "Copying setup files to Windows.~BT directory..."
             Copy-Item -Path "$extractDir\sources\*" -Destination $btDir -Force -Recurse
 
-            # Create zero-byte appraiserres.dll in Windows.~BT
-            Set-Content -Path "$btDir\appraiserres.dll" -Value "" -Force
 
-            # Add additional bypass files
-            Set-Content -Path "$btDir\Skip.cmd" -Value @"
-@echo off
-reg add HKLM\SYSTEM\Setup\MoSetup /f /v AllowUpgradesWithUnsupportedTPMorCPU /d 1 /t reg_dword
-reg add HKLM\SYSTEM\Setup\LabConfig /f /v BypassTPMCheck /d 1 /t reg_dword
-reg add HKLM\SYSTEM\Setup\LabConfig /f /v BypassSecureBootCheck /d 1 /t reg_dword
-reg add HKLM\SYSTEM\Setup\LabConfig /f /v BypassRAMCheck /d 1 /t reg_dword
-reg add HKLM\SYSTEM\Setup\LabConfig /f /v BypassStorageCheck /d 1 /t reg_dword
-reg add HKLM\SYSTEM\Setup\LabConfig /f /v BypassCPUCheck /d 1 /t reg_dword
-reg add HKLM\SYSTEM\Setup /f /v BypassComponentCheck /d 1 /t reg_dword
-"@ -Force
-
-            # Modify the EditionID to ensure compatibility
-            $regScript = @"
-Windows Registry Editor Version 5.00
-
-[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion]
-"EditionID_undo"="Professional"
-"EditionID"="Professional"
-"ProductName"="Windows 11 Pro"
-"@
-            Set-Content -Path "$btDir\edition.reg" -Value $regScript -Force
 
             # Create batch file to run registry changes and launch setup
             $setupBatchPath = "$btDir\RunSetup.cmd"
