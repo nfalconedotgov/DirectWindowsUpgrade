@@ -376,22 +376,6 @@ try {
 
     Write-Host "ISO extracted successfully to $extractDir" -ForegroundColor Green
 
-    # Create zero-byte appraiserres.dll to bypass TPM check
-    Write-Host "Creating TPM check bypass..."
-    $appraiserdllPath = "$extractDir\sources\appraiserres.dll"
-    if (Test-Path $appraiserdllPath) {
-        # Make a backup just in case
-        Copy-Item -Path $appraiserdllPath -Destination "$appraiserdllPath.bak" -Force
-        # Replace with zero-byte file
-        Set-Content -Path $appraiserdllPath -Value "" -Force
-    } else {
-        # Create new zero-byte file if it doesn't exist
-        New-Item -Path $appraiserdllPath -ItemType File -Force | Out-Null
-    }
-
-    # Create EI.cfg to avoid product key prompts
-    $eiCfgPath = "$extractDir\sources\EI.cfg"
-    Set-Content -Path $eiCfgPath -Value "[Channel]`n_Default" -Force
 
     # Create SetupConfig.ini
     $setupConfigPath = "$extractDir\sources\SetupConfig.ini"
