@@ -6,14 +6,14 @@ This PowerShell script enables silent in-place upgrades to Windows 11, specifica
 
 Windows 11 systems on older major versions (21H2, 22H2) often cannot upgrade to newer versions (23H2, 24H2) via Windows Update due to failing compatibility checks. This script bypasses these limitations by:
 
-- Bypassing TPM, CPU, and other hardware compatibility checks
-- Enabling in-place upgrades even on "unsupported" hardware
+~~- Bypassing TPM, CPU, and other hardware compatibility checks~~
+~~- Enabling in-place upgrades even on "unsupported" hardware~~
 - Providing a completely silent, no-interaction upgrade process
 - Automatically handling all aspects of the upgrade, including reboots
 
 ## Features
 
-- **Bypasses Hardware Requirements**: Overcomes TPM, CPU, RAM, SecureBoot and other compatibility blocks
+~~- **Bypasses Hardware Requirements**: Overcomes TPM, CPU, RAM, SecureBoot and other compatibility blocks~~
 - **Automated ISO Handling**: Downloads or uses local ISO files (configurable)
 - **Dependency Management**: Automatically installs 7-Zip if not present
 - **Silent Operation**: Runs completely in the background with no user interaction
@@ -40,7 +40,7 @@ Windows 11 systems on older major versions (21H2, 22H2) often cannot upgrade to 
 ## Process Details
 
 - The script extracts the Windows 11 ISO using 7-Zip
-- Registry keys are set to bypass hardware compatibility checks
+~~- Registry keys are set to bypass hardware compatibility checks~~
 - Setup files are prepared with appropriate parameters
 - The upgrade process runs completely silently
 - By default, the system will reboot automatically when needed
@@ -60,13 +60,6 @@ For best results, use the business editions of Windows 11 with this script. You 
 - [MassGrave Genuine Windows ISOs](https://massgrave.dev/genuine-installation-media.html)
 
 Make sure to use an ISO that contains the Windows 11 version you want to upgrade to (e.g., 23H2, 24H2).
-
-## When to Use This Script
-
-- When Windows Update fails to offer major Windows 11 version upgrades
-- When systems have "unsupported" hardware that blocks updates
-- When you need to perform silent, unattended upgrades
-- For bulk upgrades across multiple systems with similar hardware
 
 ## Logs and Monitoring
 
