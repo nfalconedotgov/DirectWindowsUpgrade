@@ -438,41 +438,7 @@ PreinstallKitSpace=8000
     Set-Content -Path $answerFilePath -Value $answerFileContent -Force
     Write-Host "Created custom unattend.xml file for compatibility bypass"
 
-    # Try the alternate 'Server' product trick - update setup files
-    Write-Host "Applying 'Server' product trick to bypass hardware checks..."
-    try {
-        $setupConfigDatPath = "$extractDir\sources\setupconfig.dat"
-        if (Test-Path $setupConfigDatPath) {
-            $content = Get-Content -Path $setupConfigDatPath -Encoding Byte
-            $clientPattern = [System.Text.Encoding]::Unicode.GetBytes("Client")
-            $serverPattern = [System.Text.Encoding]::Unicode.GetBytes("Server")
-
-            $found = $false
-            for ($i = 0; $i -lt $content.Length - $clientPattern.Length; $i++) {
-                $matched = $true
-                for ($j = 0; $j -lt $clientPattern.Length; $j++) {
-                    if ($content[$i + $j] -ne $clientPattern[$j]) {
-                        $matched = $false
-                        break
-                    }
-                }
-
-                if ($matched) {
-                    $found = $true
-                    for ($j = 0; $j -lt $serverPattern.Length; $j++) {
-                        $content[$i + $j] = $serverPattern[$j]
-                    }
-                }
-            }
-
-            if ($found) {
-                [System.IO.File]::WriteAllBytes($setupConfigDatPath, $content)
-                Write-Host "Successfully modified setupconfig.dat to use Server edition bypass"
-            }
-        }
-    } catch {
-        Write-Host "Warning: Could not modify setupconfig.dat: $_"
-    }
+   
     # Setup command line arguments
     $arguments = @(
         "/auto", "upgrade",
@@ -640,7 +606,7 @@ if ($setupStatus.Success) {
             # Create batch file to run registry changes and launch setup
             $setupBatchPath = "$btDir\RunSetup.cmd"
 
-            $setupCommand = "setupprep.exe /product server /auto upgrade /quiet /compat ignorewarning /migratedrivers all /dynamicupdate enable /eula accept"
+            $setupCommand = "setupprep.exe /auto upgrade /quiet /compat ignorewarning /migratedrivers all /dynamicupdate enable /eula accept"
 
             # Add noreboot switch if automatic reboots are disabled
             if (-not $ALLOW_AUTOMATIC_REBOOT) {
@@ -650,8 +616,6 @@ if ($setupStatus.Success) {
             $setupBatch = @"
 @echo off
 cd /d "%~dp0"
-call Skip.cmd
-regedit /s edition.reg
 $setupCommand
 "@
             Set-Content -Path $setupBatchPath -Value $setupBatch -Force
